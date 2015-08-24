@@ -77,13 +77,13 @@ async function findPackages(
       packages[packageInfo.name] = packageInfo;
     } else {
       var entries = await fs.readdir(directory);
-      for (var entry of entries) {
+      await* entries.map(async (entry) => {
         var fullPath = path.join(directory, entry);
         var stat = await fs.stat(fullPath);
         if (stat.isDirectory() && entry !== 'node_modules') {
           queue.unshift(fullPath);
         }
-      }
+      });
     }
   }
 
