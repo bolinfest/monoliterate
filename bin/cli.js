@@ -8,6 +8,7 @@ process.on('unhandledRejection', function(error, promise) {
 // Make sure all .js files that are subsequently loaded are transpiled.
 require('babel-core/register')({
   blacklist: [
+    'es6.forOf',
     'useStrict',
   ],
   optional: [

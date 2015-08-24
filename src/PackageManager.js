@@ -4,6 +4,15 @@ var Dequeue = require('dequeue');
 var {fsPromise: fs} = require('nuclide-commons');
 var path = require('path');
 
+var DEPENDENCY_KEYS = [
+  // Apparently both spellings are acceptable:
+  'bundleDependencies',
+  'bundledDependencies',
+
+  'dependencies',
+  'devDependencies',
+];
+
 type PackageInfo = {
   /** Name of the package. */
   name: string;
@@ -18,18 +27,21 @@ type PackageInfo = {
   json: Object;
 };
 
-class PackageManager {
-  _packages: {[packageName: string]: PackageInfo};
+type PackageMap = {[packageName: string]: PackageInfo};
 
-  constructor(packages: {[packageName: string]: PackageInfo}) {
+class PackageManager {
+  _packages: PackageMap;
+  _sortedPackages: Array<PackageInfo>;
+
+  constructor(packages: PackageMap) {
+    // TODO: Combine these into a Map since it preserves insertion order.
     this._packages = packages;
-    // Do topological sort.
+    this._sortedPackages = new PackageSorter(packages).getSortedPackages();
   }
 
   /** Applies f to the packages in topologically sorted order. */
   forEach(f: (packageInfo: PackageInfo) => mixed): void {
-    for (var key in this._packages) {
-      var packageInfo = this._packages[key];
+    for (var packageInfo of this._sortedPackages) {
       f(packageInfo);
     }
   }
@@ -39,10 +51,68 @@ class PackageManager {
   }
 }
 
+class PackageSorter {
+  _packages: PackageMap;
+  _inProgress: Set<string>;
+  _visited: Set<string>;
+  _sortedPackages: Array<PackageInfo>;
+
+  constructor(packages: PackageMap) {
+    this._packages = packages;
+    this._inProgress = new Set();
+    this._visited = new Set();
+    this._sortedPackages = [];
+    for (var packageName in packages) {
+      this._depthFirstSearch(packageName);
+    }
+  }
+
+  getSortedPackages(): Array<PackageInfo> {
+    return this._sortedPackages;
+  }
+
+  _depthFirstSearch(packageName: string): ?{packageNameCausingCycle: string, errorMessage: string} {
+    if (this._visited.has(packageName)) {
+      return;
+    }
+    if (this._inProgress.has(packageName)) {
+      return {
+        packageNameCausingCycle: packageName,
+        errorMessage: `Recursive package dependencies: ${packageName}`,
+      };
+    }
+
+    this._inProgress.add(packageName);
+    var packageInfo = this._packages[packageName];
+    for (var dependency of packageInfo.dependencies) {
+      if (!(dependency in this._packages)) {
+        continue;
+      }
+
+      var error = this._depthFirstSearch(dependency);
+      if (error != null) {
+        var {packageNameCausingCycle, errorMessage} = error;
+        if (packageNameCausingCycle === packageName) {
+          throw new Error(errorMessage);
+        } else {
+          return {
+            packageNameCausingCycle,
+            errorMessage: `${errorMessage}, ${packageName}`,
+          };
+        }
+      }
+    }
+
+    this._inProgress.delete(packageName);
+    this._sortedPackages.push(packageInfo);
+    this._visited.add(packageName);
+  }
+}
+
 async function findPackages(
   directories: Array<string>,
   options: Object,
-): Promise<{[packageName: string]: PackageInfo}> {
+): Promise<PackageMap> {
   var queue = new Dequeue();
   for (var directory of directories) {
     if (!(await fs.exists(directory))) {
@@ -68,13 +138,22 @@ async function findPackages(
       invariant(stats.isFile());
 
       var json = JSON.parse(await fs.readFile(packageJson, {'encoding': 'utf-8'}));
-      var packageInfo = {
-        name: json['name'],
+
+      // Find all dependencies.
+      var dependencies = new Set();
+      for (var key of DEPENDENCY_KEYS) {
+        for (var dependency in (json[key] || {})) {
+          dependencies.add(dependency);
+        }
+      }
+
+      var name = json['name'];
+      packages[name] = {
+        name,
         path: packageJson,
-        dependencies: new Set(),
+        dependencies,
         json: Object.freeze(json),
       };
-      packages[packageInfo.name] = packageInfo;
     } else {
       var entries = await fs.readdir(directory);
       await* entries.map(async (entry) => {
