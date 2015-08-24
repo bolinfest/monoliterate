@@ -1,0 +1,9 @@
+{
+  "name": "monoliterate",
+  "repository": "https://github.com/bolinfest/monoliterate",
+  "dependencies": {
+    "babel-core": "5.8.22",
+    "dequeue": "1.0.5",
+    "yargs": "3.21.0"
+  }
+}
