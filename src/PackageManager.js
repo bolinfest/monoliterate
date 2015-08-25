@@ -155,13 +155,13 @@ async function findPackages(
       };
     } else {
       var entries = await fs.readdir(directory);
-      await* entries.map(async (entry) => {
+      await Promise.all(entries.map(async (entry) => {
         var fullPath = path.join(directory, entry);
         var stat = await fs.stat(fullPath);
         if (stat.isDirectory() && entry !== 'node_modules') {
           queue.unshift(fullPath);
         }
-      });
+      }));
     }
   }
 
