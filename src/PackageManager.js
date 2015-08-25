@@ -37,7 +37,7 @@ class PackageManager {
   }
 
   /** Applies f to the packages in topologically sorted order. */
-  packages(): Iteraror<PackageInfo> {
+  packages(): Iterator<PackageInfo> {
     return this._sortedPackages.values();
   }
 
