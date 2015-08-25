@@ -30,24 +30,19 @@ type PackageInfo = {
 type PackageMap = {[packageName: string]: PackageInfo};
 
 class PackageManager {
-  _packages: PackageMap;
-  _sortedPackages: Array<PackageInfo>;
+  _sortedPackages: Map<string, PackageInfo>;
 
   constructor(packages: PackageMap) {
-    // TODO: Combine these into a Map since it preserves insertion order.
-    this._packages = packages;
     this._sortedPackages = new PackageSorter(packages).getSortedPackages();
   }
 
   /** Applies f to the packages in topologically sorted order. */
-  forEach(f: (packageInfo: PackageInfo) => mixed): void {
-    for (var packageInfo of this._sortedPackages) {
-      f(packageInfo);
-    }
+  packages(): Iteraror<PackageInfo> {
+    return this._sortedPackages.values();
   }
 
   getInfoForPackage(packageName: string): ?PackageInfo {
-    return this._packages[packageName];
+    return this._sortedPackages.get(packageName);
   }
 }
 
@@ -67,8 +62,12 @@ class PackageSorter {
     }
   }
 
-  getSortedPackages(): Array<PackageInfo> {
-    return this._sortedPackages;
+  getSortedPackages(): Map<string, PackageInfo> {
+    var map = new Map();
+    for (var packageInfo of this._sortedPackages) {
+      map.set(packageInfo.name, packageInfo);
+    }
+    return map;
   }
 
   _depthFirstSearch(packageName: string): ?{packageNameCausingCycle: string, errorMessage: string} {
