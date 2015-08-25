@@ -13,7 +13,7 @@ var DEPENDENCY_KEYS = [
   'devDependencies',
 ];
 
-type PackageInfo = {
+export type PackageInfo = {
   /** Name of the package. */
   name: string;
 
@@ -174,5 +174,6 @@ async function createPackageManager(directories: Array<string>): Promise<Package
 }
 
 module.exports = {
+  PackageManager,
   createPackageManager,
 };

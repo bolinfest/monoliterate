@@ -9,6 +9,9 @@ function createYargs(): void {
     .command(
       'manifests',
       'List the paths to the package.json files')
+    .command(
+      'setup',
+      'Symlink local packages and `npm install` the rest')
     .help('help')
     .alias('h', 'help');
 
@@ -37,6 +40,17 @@ function createYargs(): void {
       .alias('h', 'help');
     var {printManifestPaths} = require('../src/manifests');
     printManifestPaths(argv.directory);
+  } else if (command === 'setup') {
+    var {argv} = yargs
+      .resetOptions()
+      .option('directory', {
+        alias: 'd',
+        description: 'Where to look for packages',
+      })
+      .help('help')
+      .alias('h', 'help');
+    var {install} = require('../src/setup');
+    install(argv.directory);
   } else {
     yargs.showHelp();
   }
