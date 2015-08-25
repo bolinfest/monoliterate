@@ -2,7 +2,7 @@
 
 // Before we run anything, add the unhandled Promise rejection handler.
 process.on('unhandledRejection', function(error, promise) {
-  console.error('Unhandled promise rejection with error: ' + error);
+  console.error('Unhandled promise rejection with error: ' + error + '\n' + error.stack);
 });
 
 // Make sure all .js files that are subsequently loaded are transpiled.
