@@ -1,5 +1,5 @@
 /* @flow */
-var {createPackageManager} = require('../src/PackageManager');
+var {createPackageManager} = require('./PackageManager');
 
 async function printNames(directory: string): Promise<void> {
   var packageManager = await createPackageManager([
